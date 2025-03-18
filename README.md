@@ -56,6 +56,12 @@ Install the required Python packages using pip:
 pip install -r requirements.txt
 ```
 
+### Seed dummy data
+
+```
+python -m app.seed
+```
+
 ### Run service
 
 ```
