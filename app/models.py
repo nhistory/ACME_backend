@@ -1,26 +1,13 @@
 from __future__ import annotations
 
 import enum
-import os
-from sqlalchemy import create_engine, String, Enum
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, sessionmaker
+from sqlalchemy import String, Enum
+from sqlalchemy.orm import Mapped, mapped_column
 from typing import Optional
 from uuid import uuid4, UUID
 from sqlalchemy.dialects.postgresql import UUID as PostgresUUID
-from dotenv import load_dotenv
+from .database import Base
 
-load_dotenv()
-
-# Database URL
-DATABASE_URL = os.getenv("DATABASE_URL")
-if DATABASE_URL is None:
-    raise ValueError("DATABASE_URL environment variable not set.")
-
-engine = create_engine(DATABASE_URL)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-class Base(DeclarativeBase):
-    pass
 
 class LeagueEnum(str, enum.Enum):
     NCAAB = "NCAAB"
@@ -39,10 +26,3 @@ class Team(Base):
     league: Mapped[LeagueEnum] = mapped_column(Enum(LeagueEnum), nullable=False)
     conference: Mapped[Optional[str]] = mapped_column(String)
     division: Mapped[Optional[str]] = mapped_column(String)
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()

@@ -1,34 +1,90 @@
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Security, HTTPException, Depends, status
+from fastapi.security import APIKeyHeader
 from sqlalchemy.orm import Session
-from .models import get_db, Team, LeagueEnum
-from .schemas import Team as SchemaTeam
+from sqlalchemy import nullslast
+from .models import Team, LeagueEnum
+from .database import get_db
+from .schemas import TeamResponse
+import os
+from dotenv import load_dotenv
+
+# Load environment variables from .env file (if it exists)
+load_dotenv()
 
 app = FastAPI()
 
-@app.get("/team_list/{league}", response_model=list[SchemaTeam])
-def read_teams(league: LeagueEnum, sort_by: str = "Name", db: Session = Depends(get_db)):
+api_key_header = APIKeyHeader(name="X-API-KEY", auto_error=False)
+API_KEY = os.environ.get("API_KEY")
+
+if API_KEY is None:
+    raise ValueError("API_KEY environment variable not set!")
+
+async def get_api_key(api_key_header: str = Security(api_key_header)):
+    if api_key_header != API_KEY:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid API Key",
+        )
+    return api_key_header
+
+@app.get(
+    "/team_list/{league}",
+    response_model=list[TeamResponse],
+    responses={
+        400: {"description": "Invalid request"},
+        401: {"description": "Unauthenticated"},
+        403: {"description": "Unauthorized"},
+        404: {"description": "Teams not found"},
+        500: {"description": "Internal Server Error"},
+    },
+)
+def read_teams(
+    league: LeagueEnum,
+    sort_by: str = "Name",
+    db: Session = Depends(get_db),
+    api_key: str = Security(get_api_key),
+):
     """
     Get a list of teams based on the provided league.
-
-    Args:
-        league: The league to filter by (using the LeagueEnum).
-        sort_by: The attribute to sort by ('Name', 'Conference', or 'Division').
-        db: The database session (dependency injection).
-
-    Returns:
-        A list of Team objects.
     """
+    print(f"Request for league {league} received with API key: {api_key}")
+    
+    valid_sort_fields = ["Name", "Conference", "Division"]
+    if sort_by not in valid_sort_fields:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid sort_by parameter.  Must be one of: {', '.join(valid_sort_fields)}",
+        )
 
-    # Query the database, filtering by the league enum.
-    query = db.query(Team).filter(Team.league == league)
+    try:
+        # Query the database, filtering by the league enum.
+        query = db.query(Team).filter(Team.league == league)
 
-    # Apply sorting.
-    if sort_by == "Conference":
-        query = query.order_by(Team.conference)
-    elif sort_by == "Division":
-        query = query.order_by(Team.division)
-    else:  # Default to sorting by name
-        query = query.order_by(Team.name)
+        if sort_by == "Conference":
+            query = query.order_by(nullslast(Team.conference))
+        elif sort_by == "Division":
+            query = query.order_by(nullslast(Team.division))
+        else:
+            query = query.order_by(Team.name)
 
-    teams = query.all()
-    return teams
+        teams = query.all()
+
+        # Check if any teams were found.
+        if not teams:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"No teams found for league: {league}",
+            )
+
+        return teams
+
+    except HTTPException as e:
+      raise e
+
+    except Exception as e:
+        # Log the exception for debugging purposes.
+        print(f"An unexpected error occurred: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An unexpected error occurred. Please try again later.",
+        )
