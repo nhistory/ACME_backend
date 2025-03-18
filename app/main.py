@@ -1,8 +1,7 @@
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends
 from sqlalchemy.orm import Session
-from .models import get_db, Team, LeagueEnum # Import LeagueEnum and Team
+from .models import get_db, Team, LeagueEnum
 from .schemas import Team as SchemaTeam
-from uuid import UUID
 
 app = FastAPI()
 

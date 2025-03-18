@@ -1,13 +1,21 @@
-import enum
 from __future__ import annotations
+
+import enum
+import os
 from sqlalchemy import create_engine, String, Enum
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, sessionmaker
 from typing import Optional
 from uuid import uuid4, UUID
 from sqlalchemy.dialects.postgresql import UUID as PostgresUUID
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Database URL
-DATABASE_URL = "postgresql://acme_user:acme_password@localhost:5432/acme_db"
+DATABASE_URL = os.getenv("DATABASE_URL")
+if DATABASE_URL is None:
+    raise ValueError("DATABASE_URL environment variable not set.")
+
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
