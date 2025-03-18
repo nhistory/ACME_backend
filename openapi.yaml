@@ -1,0 +1,79 @@
+openapi: '3.0.3'
+info:
+  title: Team List API
+  description: Get teams
+  version: 0.0.1
+servers:
+  - url: https://localhost:8000
+security:
+  - ApiKeyAuth: []
+paths:
+  /team_list/{league}:
+    get:
+      operationId: team_list
+      summary: GET /team_list
+      description: Returns list of teams based on league passed.
+      parameters:
+        - name: league
+          in: path
+          description: The league to search.
+          required: true
+          schema:
+            type: string
+            enum:
+              - NCAAB
+              - NCAAF
+              - NFL
+              - UFL
+              - USFL
+        - name: sort_by
+          in: query
+          description: Attribute to sort the team list by.
+          required: false
+          schema:
+            type: string
+            enum:
+              - Name
+              - Conference
+              - Division
+            default: Name
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Team'
+        '400':
+          description: invalid request
+        '401':
+          description: unauthenticated
+        '403':
+          description: unauthorized
+      tags:
+        - team_list
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-KEY
+  schemas:
+    Team:
+      type: object
+      properties:
+        name:
+          type: string
+          example: Vikings
+        nickname:
+          type: string
+          example: MIN
+        display_name:
+          type: string
+          example: Minnesota
+        id:
+          type: string
+          format: uuid
+          example: 681a4ca6-a84b-44d6-91e6-63b3a2c89a7d

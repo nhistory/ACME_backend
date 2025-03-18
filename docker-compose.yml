@@ -1,0 +1,21 @@
+services:
+  acme_db:
+    image: postgres:15
+    container_name: acme_db_container
+    restart: always
+    environment:
+      POSTGRES_USER: acme_user
+      POSTGRES_PASSWORD: acme_password
+      POSTGRES_DB: acme_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - acme_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U acme_user -d acme_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  acme_db_data:
