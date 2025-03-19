@@ -1,5 +1,6 @@
 from fastapi import FastAPI, Security, HTTPException, Depends, status
 from fastapi.security import APIKeyHeader
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from sqlalchemy import nullslast
 from .models import Team, LeagueEnum
@@ -26,6 +27,20 @@ async def get_api_key(api_key_header: str = Security(api_key_header)):
             detail="Invalid API Key",
         )
     return api_key_header
+
+# Configure CORS
+origins = [
+    "http://localhost:3000",
+    "http://localhost:3001",
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,  # List of allowed origins
+    allow_credentials=True, #  Important if you're using cookies or authentication
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],  # Allowed HTTP methods
+    allow_headers=["*"],  #  Or specify specific headers: ["X-API-KEY", "Content-Type"]
+)
 
 @app.get(
     "/team_list/{league}",
